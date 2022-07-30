@@ -1,0 +1,25 @@
+name:                SimpleHTTP
+version:             0.1.0.0
+#synopsis:
+#description:
+homepage:            https://github.com/githubuser/SimpleHTTP#readme
+license:             BSD3
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2022 Author name here
+category:            Web
+extra-source-files:
+- README.md
+
+dependencies:
+  - base >= 4.7 && < 5
+  - lens
+  - aeson
+  - bytestring
+  - text
+  - http-conduit
+
+executables:
+  SimpleHTTP:
+    source-dirs:      src
+    main:             Main.hs
