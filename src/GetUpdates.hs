@@ -20,8 +20,8 @@ data Message = Message { message_id :: Int,
 						 from :: From,
 						 chat :: Chat,
 						 date :: Int,
-						 text :: String
-					     --entities :: [Entity] 
+						 text :: String,
+					     entities :: [Entity] 
 						 }  		deriving ( Eq, Show, Read, Generic )
 
 data From = From { id :: Int,
@@ -49,8 +49,25 @@ instance FromJSON Chat where
     return (Chat { chat_id = chat_id, chat_first_name = chat_first_name, chat_username = chat_username, c_type = c_type })
    
    
+instance FromJSON Message where  
+  parseJSON = withObject "Message" $ \obj -> do
+    message_id <- obj .: "message_id"
+    from <- obj .: "from"
+    chat <- obj .: "chat"
+    date <- obj .: "date"
+    text <- obj .:? "text" .!= ""
+    entities <- obj .:? "entities" .!= []
+    return (Message { message_id = message_id, GetUpdates.from = from, chat = chat, date = date, text = text, entities = entities  })
+	
+	
+instance FromJSON Entity where
+  parseJSON = withObject "Entity" $ \obj -> do
+    offset <- obj .: "offset"
+    length <- obj .: "length"
+    entity_type <- obj .: "type"
+    return (Entity { offset = offset, GetUpdates.length = length, entity_type = entity_type })
+  
+
 instance FromJSON From
-instance FromJSON Message
 instance FromJSON UpdateResult
 instance FromJSON Response
-instance FromJSON Entity
