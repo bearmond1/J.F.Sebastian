@@ -19,6 +19,7 @@ dependencies:
   - text
   - http-conduit
   - mtl
+  - time
 
 executables:
   SimpleHTTP:

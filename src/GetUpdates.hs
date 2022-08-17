@@ -36,7 +36,7 @@ data Chat = Chat { chat_id :: Int,
 				   c_type :: String  } deriving ( Eq, Show, Read )
 				   
 data Entity = Entity { offset :: Int,
-					   length :: Int,
+					   entity_length :: Int,
 					   entity_type :: String }  		deriving ( Eq, Show, Read, Generic )
 
 
@@ -63,9 +63,9 @@ instance FromJSON Message where
 instance FromJSON Entity where
   parseJSON = withObject "Entity" $ \obj -> do
     offset <- obj .: "offset"
-    length <- obj .: "length"
+    entity_length <- obj .: "length"
     entity_type <- obj .: "type"
-    return (Entity { offset = offset, GetUpdates.length = length, entity_type = entity_type })
+    return (Entity { offset = offset, entity_length = entity_length, entity_type = entity_type })
   
 
 instance FromJSON From
