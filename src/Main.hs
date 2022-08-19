@@ -10,7 +10,6 @@ import           Data.ByteString.Lazy.Char8     as Char8      ( ByteString, unpa
 import           GetUpdates
 import           Control.Monad                  ( when, liftM )
 import           Control.Concurrent             ( threadDelay )
---import           Control.Monad.Trans
 import           Data.Time                    
 
 
@@ -22,35 +21,37 @@ data Handle = Handle { bot_token :: String,
                        logger :: Logger }  deriving Show
 
 data Logger = Logger { output_priority :: Priority,
-                       log_ :: [[(Priority,LocalTime,String)]]  }   deriving Show
+                       log_ :: [( LocalTime,[ (Priority,String) ] )]  }   deriving Show
 
+-- to write comparable instance
 data Priority = Debug | Info | Error      deriving Show
 
 
 
 answer_updates :: Handle -> IO Handle
 answer_updates handle = do
+  -- getting updates & time
   res <- httpLBS . parseRequest_ $ "https://api.telegram.org/bot" ++ (bot_token handle) ++ "/getUpdates"
   time <- liftM zonedTimeToLocalTime $ getZonedTime
-  let upd_log = if null res then (Main.Error,time,"Empty response on getUpdates") 
-                            else (Info,time,"getUpdates recieved")
-  (response,parse_log) <- safe_response $ getResponseBody res  
-  answer_handle $ write_handle_response ( log_handle_next handle [parse_log,upd_log] ) response
-  
-
-
-answer_handle :: Handle -> IO Handle
-answer_handle handle = do
-  time <- liftM zonedTimeToLocalTime $ getZonedTime
-  let unaswered_updates = filter ( \x -> notElem (update_id x) (answered_updates handle) ) (result $ update handle)
+  -- logging updates recieving, to enhance
+  let upd_log = if null res then (Main.Error,"Empty response on getUpdates") 
+                            else (Info,"getUpdates recieved")
+  -- parsing updates
+  let (response,parse_log) = safe_response $ getResponseBody res  
+  -- writing accumulated logs, response into handle & answering updates
+  let unaswered_updates = filter ( \x -> notElem (update_id x) (answered_updates handle) ) (result response)
+  -- apply echo message to unaswered_updates
   response_results <- mapM (echo_message $ handle) unaswered_updates
-  let response_log = if unaswered_updates == [] then [(Info,time,"No messages to answer")]
-                                                 else [(Info,time,"echo message" ++ show response_results)]
-  return $ write_answered_handle ( log_handle handle response_log ) $ map update_id unaswered_updates
+  let response_log = if unaswered_updates == [] then [(Info,"No messages to answer")]
+                                                 else [(Info,"echo message" ++ show response_results)]
+  -- write log to handle & return it
+  return $ write_answered_handle ( log_handle ( log_handle_next handle (time,[parse_log,upd_log]) ) response_log ) $ map update_id unaswered_updates
+ 
 
 
 echo_message :: Handle -> UpdateResult -> IO Char8.ByteString
 echo_message handle upd = do
+  -- constructing & sending echo message request
    let req = "https://api.telegram.org/bot" ++  
               bot_token handle ++
               "/sendMessage?chat_id=" ++ 
@@ -64,20 +65,22 @@ echo_message handle upd = do
 
 main :: IO ()
 main = do
+  -- initialize hanlde & start program cycle
   handle <- getHandle
   main_loop handle
-  
-  
+
+
 main_loop :: Handle -> IO ()
 main_loop handle = do
  new_handle <- answer_updates handle
+ --mapM putStrln $ filter (\[(p,t,m)] -> p == (output_priority . logger $ new_handle) ) (log_ . logger $ new_handle)
  print $ logger new_handle
  threadDelay 2000000
  main_loop new_handle
- 
 
 
-  
+
+
 -- Initialize
 getHandle :: IO Handle
 getHandle = do  
@@ -89,20 +92,19 @@ getHandle = do
                   answered_updates = answered_updates, 
                   update = Response { ok = False, result = [] }, 
                   help_text = "helptext",
-                  logger = Logger { output_priority = Info, log_ = [[]] } }
-  
+                  logger = Logger { output_priority = Info, log_ = [] } }
+
 
 -- Exit
 closeHandle :: Handle -> IO ()
 closeHandle handle = undefined -- ответить на сообщения, записать файлы конфигурации
 
 
-safe_response :: Char8.ByteString -> IO (Response,(Priority,LocalTime,String))
-safe_response json = do
-  time <- liftM zonedTimeToLocalTime $ getZonedTime
+safe_response :: Char8.ByteString -> (Response,(Priority,String))
+safe_response json = 
   case eitherDecode json :: Either String Response 
-   of Right r -> return (r,(Info,time,"Successful parse"))
-      Left s -> return (Response { ok = False, result = [] },(Main.Error,time,"Failed to parse JSON :" ++ s))
+   of Right r -> (r,(Info,"Successful parse"))
+      Left s -> (Response { ok = False, result = [] },(Main.Error,"Failed to parse JSON :" ++ s))
 
 	  
 
@@ -113,21 +115,24 @@ write_handle_response h r = Handle { bot_token = bot_token h,
                                      help_text = help_text h,
                                      logger = logger h  }
 
-log_handle :: Handle -> [(Priority,LocalTime,String)] -> Handle
+log_handle :: Handle -> [ (Priority,String) ] -> Handle
 log_handle h l = Handle { bot_token = bot_token h, 
                           answered_updates = answered_updates h,
                           update = update h,
                           help_text = help_text h,
                           logger = Logger { output_priority = output_priority $ logger h, log_ = log  } }
-				where log = if length (log_ $ logger h) == 0 then [l] else [l ++ head (log_ $ logger h)] ++ tail (log_ $ logger h)
+                where log = [(fst last_entry,l ++ snd last_entry)] ++ rest_log 
+                      old_log = log_ $ logger h
+                      last_entry = head old_log
+                      rest_log = tail old_log
 				
-log_handle_next :: Handle -> [(Priority,LocalTime,String)] -> Handle
+log_handle_next :: Handle -> (LocalTime, [ (Priority,String) ] ) -> Handle
 log_handle_next h l = Handle { bot_token = bot_token h, 
                                answered_updates = answered_updates h,
                                update = update h,
                                help_text = help_text h,
-                               logger = Logger { output_priority = output_priority $ logger h, log_ = [l] ++ (log_ $ logger h) } }
-				--where log = if length (log_ $ logger h) == 0 then [l] else [l ++ head (log_ $ logger h)] ++ tail (log_ $ logger h)
+                               logger = Logger { output_priority = output_priority $ logger h, 
+							   log_ = [l] ++ (log_ $ logger h) } }
 
 write_answered_handle :: Handle -> [Int] -> Handle
 write_answered_handle h l = Handle { bot_token = bot_token h,
