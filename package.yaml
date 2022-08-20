@@ -20,6 +20,7 @@ dependencies:
   - http-conduit
   - mtl
   - time
+  - transformers
 
 executables:
   SimpleHTTP:

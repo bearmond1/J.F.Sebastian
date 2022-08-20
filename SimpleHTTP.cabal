@@ -32,5 +32,6 @@ executable SimpleHTTP
     lens,
     mtl,
     text,
-    time
+    time,
+    transformers
   default-language: Haskell2010
