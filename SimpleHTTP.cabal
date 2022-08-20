@@ -20,7 +20,9 @@ extra-source-files:
 executable SimpleHTTP
   main-is: Main.hs
   other-modules:
+    Answer
     GetUpdates
+    Handle
     Paths_SimpleHTTP
   hs-source-dirs:
     src

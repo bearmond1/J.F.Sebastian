@@ -3,67 +3,14 @@
 module Main where
  
 import           Network.HTTP.Simple             ( httpLBS, getResponseBody, parseRequest_ )
-import           Data.Aeson
-import           Data.Text                       ( Text )
-import qualified Data.Text.IO                    as TIO
-import           Data.ByteString.Lazy.Char8      as Char8      ( ByteString, unpack, empty )
 import           GetUpdates
-import           Control.Monad                   ( when, liftM )
+import           Handle
+import           Answer
+import           Control.Monad                   ( liftM )
 import           Control.Concurrent              ( threadDelay )
 import           Data.Time
 import           Control.Monad.Trans.Writer.Lazy ( WriterT, runWriterT, tell )
 import           Control.Monad.IO.Class          ( liftIO )
-
-
-
-data Handle = Handle { bot_token :: String,
-                       answered_updates :: [Int],
-                       update :: Response, 
-                       help_text :: String,
-                       logger :: Logger }  deriving Show
-
-data Logger = Logger { output_priority :: Priority,
-                       log_ :: [( LocalTime,[ (Priority,String) ] )]  }   deriving Show
-
--- to write comparable instance
-data Priority = Debug | Info | Error      deriving Show
-
- 
-
-
-answer_updates :: Handle -> WriterT [(Priority,String)] IO Handle
-answer_updates handle = do
-  -- getting updates & time
-  res <- liftIO $ httpLBS . parseRequest_ $ "https://api.telegram.org/bot" ++ (bot_token handle) ++ "/getUpdates"
-  -- logging updates recieving, to enhance
-  tell $ if null res then [(Main.Error,"Empty response on getUpdates")]
-                            else [(Info,"getUpdates recieved")]
-  -- parsing updates
-  response <- safe_response $ getResponseBody res
-  -- writing accumulated logs, response into handle & answering updates
-  let unaswered_updates = filter ( \x -> notElem (update_id x) (answered_updates handle) ) (result response)
-  -- apply echo message to unaswered_updates
-  response_results <- liftIO $ mapM (echo_message $ handle) unaswered_updates
-  tell $ if unaswered_updates == [] then [(Info,"No messages to answer")]
-                                                 else [(Info,"echo message" ++ show response_results)]
-  -- write log to handle & return it
-  return $ write_answered_handle handle $ map update_id unaswered_updates
-  
-  
-
-
-echo_message :: Handle -> UpdateResult -> IO Char8.ByteString
-echo_message handle upd = do
-  -- constructing & sending echo message request
-   let req = "https://api.telegram.org/bot" ++  
-              bot_token handle ++
-              "/sendMessage?chat_id=" ++ 
-              show ( chat_id $ chat $ message $ upd ) ++ 
-              "&text=" ++ 
-              (text $ message upd)
-   res <- httpLBS $ parseRequest_ req
-   return (getResponseBody res)
-
 
 
 main :: IO ()
@@ -80,59 +27,3 @@ main_loop handle = do
   --print $ logger new_handle
   threadDelay 2000000
   main_loop $ log_handle new_handle (time,log)
-
-
-
-
--- Initialize
-getHandle :: IO Handle
-getHandle = do  
-  contents <- readFile "C:/Haskell/SimpleHTTP/.stack-work/file.txt"
-  let answered_updates = map read $ words contents
-  
-  token <- readFile "C:/Haskell/SimpleHTTP/.stack-work/bot_token.txt"
-  return Handle { bot_token = token, 
-                  answered_updates = answered_updates, 
-                  update = Response { ok = False, result = [] }, 
-                  help_text = "helptext",
-                  logger = Logger { output_priority = Info, log_ = [] } }
-
-
--- Exit
-closeHandle :: Handle -> IO ()
-closeHandle handle = undefined -- ответить на сообщения, записать файлы конфигурации
-
-
-safe_response :: Char8.ByteString -> WriterT [(Priority,String)] IO Response
-safe_response json = do
-  let (response,log) = case (eitherDecode json :: Either String Response) of 
-                        Right r -> (r,(Info,"Successful parse"))
-                        Left s -> (Response { ok = False, result = [] },(Main.Error,"Failed to parse JSON :" ++ s))
-  tell [log]
-  return response
-
-	  
-
-write_handle_response :: Handle -> Response -> Handle
-write_handle_response h r = Handle { bot_token = bot_token h, 
-                                     answered_updates = answered_updates h,
-                                     update = r,
-                                     help_text = help_text h,
-                                     logger = logger h  }
-
-					  
-log_handle :: Handle -> ( LocalTime,[ (Priority,String) ] ) -> Handle
-log_handle h l = Handle { bot_token = bot_token h, 
-                          answered_updates = answered_updates h,
-                          update = update h,
-                          help_text = help_text h,
-                          logger = Logger {output_priority = output_priority $ logger h, log_ = [l] ++ (log_ $ logger h)}}
-
-
-write_answered_handle :: Handle -> [Int] -> Handle
-write_answered_handle h l = Handle { bot_token = bot_token h,
-                                     answered_updates = l ++ answered_updates h,
-                                     update = update h,
-                                     help_text = help_text h,
-                                     logger = logger h }
-
