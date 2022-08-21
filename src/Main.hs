@@ -6,6 +6,7 @@ import           Network.HTTP.Simple             ( httpLBS, getResponseBody, par
 import           GetUpdates
 import           Handle
 import           Answer
+import           Config
 import           Control.Monad                   ( liftM )
 import           Control.Concurrent              ( threadDelay )
 import           Data.Time
@@ -16,6 +17,7 @@ import           Control.Monad.IO.Class          ( liftIO )
 main :: IO ()
 main = do
   -- initialize hanlde & start program cycle
+  get_answered_updates
   handle <- getHandle
   main_loop handle
 

@@ -21,6 +21,7 @@ executable SimpleHTTP
   main-is: Main.hs
   other-modules:
     Answer
+    Config
     GetUpdates
     Handle
     Paths_SimpleHTTP
@@ -30,8 +31,9 @@ executable SimpleHTTP
     aeson,
     base >=4.7 && <5,
     bytestring,
+    directory,
+    filepath,
     http-conduit,
-    lens,
     mtl,
     text,
     time,

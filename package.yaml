@@ -13,14 +13,15 @@ extra-source-files:
 
 dependencies:
   - base >= 4.7 && < 5
-  - lens
   - aeson
   - bytestring
-  - text
   - http-conduit
   - mtl
   - time
   - transformers
+  - directory
+  - filepath
+  - text
 
 executables:
   SimpleHTTP:
