@@ -26,6 +26,6 @@ main_loop :: Handle -> IO ()
 main_loop handle = do
   time <- liftIO $ liftM zonedTimeToLocalTime $ getZonedTime
   (new_handle,log) <- runWriterT $ answer_updates handle
-  --print $ logger new_handle
+  closeHandle new_handle
   threadDelay 2000000
   main_loop $ log_handle new_handle (time,log)
