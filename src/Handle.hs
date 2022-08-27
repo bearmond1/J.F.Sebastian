@@ -5,6 +5,7 @@ import           GetUpdates
 import           Control.Monad              ( when, liftM )
 import           Data.Time
 import           Data.HashMap.Strict as HM  ( HashMap, update, empty, insert, lookup )
+import           Data.Time.Calendar.Compat  ( Day )
 
 data Handle = Handle { bot_token :: String,
                        answered_updates :: HashMap Day [Int],
@@ -39,11 +40,9 @@ getHandle = do
 closeHandle :: Handle -> IO ()
 closeHandle handle = do
   -- ответить на сообщения, записать файлы конфигурации  
-  local_day <- liftM ( localDay . zonedTimeToLocalTime ) $ getZonedTime
-  let content = "" --unwords $ map ( \int -> show_day local_day ++ show int) $ answered_updates handle
+  --local_day <- liftM ( localDay . zonedTimeToLocalTime ) $ getZonedTime
+  let content = show $ answered_updates handle
   when (length content > 0) $ writeFile "answered.txt" $ content
-    where show_day :: Day -> String
-          show_day d = show (fromEnum d :: Int)
 
 	  
 

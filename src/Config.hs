@@ -5,6 +5,7 @@ import           System.FilePath
 import           Data.Time
 import           Control.Monad                   ( liftM )
 import           Data.List                       ( groupBy )
+import           Data.HashMap.Strict as HM       ( HashMap, fromList )
 
 
 
@@ -16,7 +17,13 @@ get_answered_updates = do
   conf_contents <- if elem filename  cur_dir_cont
                     then readFile $ curr_dir ++ (pathSeparator : filename)
 		            else return []
+  print conf_contents
   let raw = words conf_contents
+  print raw
+  let tryread = read (raw !! 1) :: [(Day,[Int])]
+  print tryread
+  let hm = fromList tryread :: HashMap Day [Int]
+  print hm
   -- ["date20.08.202298786575","date25.08.2022987675123"]
   let grouped = groupBy ( \x y -> take 10 x == take 10 y ) raw
   -- [["20.08.202298786575"],["25.08.202298786575","25.08.202298786575","25.08.202298786575"]]
