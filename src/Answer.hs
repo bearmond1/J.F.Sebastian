@@ -2,6 +2,7 @@ module Answer where
 
 import           GetUpdates
 import           Handle
+import 			 Config
 import           Control.Monad.Trans.Writer.Lazy ( WriterT, runWriterT, tell )
 import           Data.ByteString.Lazy.Char8      as Char8      ( ByteString, unpack, empty )
 import           Network.HTTP.Simple             ( httpLBS, getResponseBody, parseRequest_ )
@@ -23,16 +24,12 @@ answer_updates handle = do
   -- parsing updates
   response <- safe_response $ getResponseBody res
   -- writing accumulated logs, response into handle & answering updates
-  let unaswered_updates = filter ( \x -> notElem (update_id x) (findWithDefault [] local_day (answered_updates handle)) ) (result response)
-  --liftIO $ print "unaswered_updates"
-  --liftIO $ print unaswered_updates
+  let unaswered_updates = filter ( \x -> notElem (update_id x) (findWithDefault [] local_day (answered_updates $ config handle)) ) (result response)
   -- apply echo message to unaswered_updates
   response_results <- liftIO $ mapM (echo_message $ handle) unaswered_updates
   tell $ if unaswered_updates == [] then [(Info,"No messages to answer")]
                                     else [(Info,"echo message" ++ show response_results)]
   -- write log to handle & return it
-  --liftIO $ print "answered_updates"
-  --liftIO $ print $ answered_updates $ write_answered_handle handle local_day $ map update_id unaswered_updates
   return $ write_answered_handle handle local_day $ map update_id unaswered_updates
   
   

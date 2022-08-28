@@ -2,78 +2,88 @@ module Handle where
 
 import           Data.Time
 import           GetUpdates
+import           System.Directory
+import           System.FilePath
+import           Config
 import           Control.Monad              ( when, liftM )
 import           Data.Time
 import           Data.HashMap.Strict as HM  ( HashMap, update, empty, insert, lookup )
-import           Data.Time.Calendar.Compat  ( Day )
 
 data Handle = Handle { bot_token :: String,
-                       answered_updates :: HashMap Day [Int],
+                       config :: Config,
                        update_response :: Response, 
-                       help_text :: String,
                        logger :: Logger }  deriving Show
-					   
---type Answered_Updates = HashMap Day [Int]
+
 
 data Logger = Logger { output_priority :: Priority,
                        log_ :: [( LocalTime,[ (Priority,String) ] )]  }   deriving Show
 
--- to write comparable instance
+
+
+-- to write Eq instance
 data Priority = Debug | Info | Error      deriving Show
 
 
 -- Initialize
 getHandle :: IO Handle
-getHandle = do  
-  contents <- readFile "C:/Haskell/SimpleHTTP/.stack-work/file.txt"
-  let answered_updates = empty --map read $ words contents
+getHandle = do
+  config <- get_config
   
-  token <- readFile "C:/Haskell/SimpleHTTP/.stack-work/bot_token.txt"
-  return Handle { bot_token = token, 
-                  answered_updates = empty :: HashMap Day [Int], 
-                  update_response = Response { ok = False, result = [] }, 
-                  help_text = "helptext",
+  let filename = "bot_token.txt"
+  curr_dir      <- getCurrentDirectory
+  cur_dir_cont  <- getDirectoryContents curr_dir
+  token_contents <- if elem filename  cur_dir_cont
+                    then readFile $ curr_dir ++ (pathSeparator : filename)
+		            else  return $ error ("Unable to find bot_token.txt in " ++ 
+					           curr_dir ++ (pathSeparator : filename) ++ 
+							   ". Bot cant work without token)" )
+
+  return Handle { bot_token = read token_contents, 
+                  config = config, 
+                  update_response = Response { ok = False, result = [] },
                   logger = Logger { output_priority = Info, log_ = [] } }
 
 
 -- Exit
 closeHandle :: Handle -> IO ()
 closeHandle handle = do
-  -- ответить на сообщения, записать файлы конфигурации  
-  --local_day <- liftM ( localDay . zonedTimeToLocalTime ) $ getZonedTime
-  let content = show $ answered_updates handle
-  when (length content > 0) $ writeFile "answered.txt" $ content
+  -- ответить на сообщения, записать файлы конфигурации
+  let answered = show $ config handle
+  when (length answered > 0) $ writeFile "conf.txt" $ answered
 
 	  
 
 write_handle_response :: Handle -> Response -> Handle
 write_handle_response h r = Handle { bot_token = bot_token h, 
-                                     answered_updates = answered_updates h,
+                                     config = config h,
                                      update_response = r,
-                                     help_text = help_text h,
                                      logger = logger h  }
 
 
 log_handle :: Handle -> ( LocalTime,[ (Priority,String) ] ) -> Handle
 log_handle h l = Handle { bot_token = bot_token h, 
-                          answered_updates = answered_updates h,
+                          config = config h,
                           update_response = update_response h,
-                          help_text = help_text h,
                           logger = Logger {output_priority = output_priority $ logger h, log_ = [l] ++ (log_ $ logger h)}}
 
 
 write_answered_handle :: Handle -> Day -> [Int] -> Handle
 write_answered_handle handle day list = 
-  let old_upd = ( answered_updates handle )
+  let old_upd = ( answered_updates $ config handle )
       new_log = case HM.lookup day old_upd of
-		         (Just x) -> update ( \x -> Just (list ++ x) ) day ( answered_updates handle )
-		         Nothing  -> insert day list ( answered_updates handle )
+		         (Just x) -> update ( \x -> Just (list ++ x) ) day ( answered_updates $ config handle )
+		         Nothing  -> insert day list ( answered_updates $ config handle )
   in append_answered handle new_log
   
 
 append_answered :: Handle -> HashMap Day [Int] -> Handle
-append_answered handle list = Handle { bot_token = bot_token handle,
-                                       answered_updates = list,
-                                       update_response = update_response handle,
-                                       help_text = help_text handle,
-                                       logger = logger handle }
+append_answered handle list = 
+  let old_config = config handle in
+  Handle { bot_token = bot_token handle,
+           config = Config { answered_updates = answered_updates old_config,
+                             users_settings = users_settings old_config,
+							 default_repeats = default_repeats old_config,
+							 helptext = helptext old_config,
+							 repeat_text = repeat_text old_config },
+		   update_response = update_response handle,
+           logger = logger handle }

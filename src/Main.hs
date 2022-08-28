@@ -17,7 +17,6 @@ import           Control.Monad.IO.Class          ( liftIO )
 main :: IO ()
 main = do
   -- initialize hanlde & start program cycle
-  get_answered_updates
   handle <- getHandle
   main_loop handle
 

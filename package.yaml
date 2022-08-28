@@ -23,6 +23,7 @@ dependencies:
   - filepath
   - text
   - unordered-containers
+  - time-compat
 
 executables:
   SimpleHTTP:
