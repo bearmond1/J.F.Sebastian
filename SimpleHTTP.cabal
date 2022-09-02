@@ -24,6 +24,8 @@ executable SimpleHTTP
     Config
     GetUpdates
     Handle
+    Log
+    Repeats
     Paths_SimpleHTTP
   hs-source-dirs:
     src

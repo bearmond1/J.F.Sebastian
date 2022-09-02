@@ -14,6 +14,7 @@ import           Control.Monad.Trans.Writer.Lazy ( WriterT, runWriterT, tell )
 import           Control.Monad.IO.Class          ( liftIO )
 
 
+
 main :: IO ()
 main = do
   -- initialize hanlde & start program cycle
@@ -23,7 +24,7 @@ main = do
 
 main_loop :: Handle -> IO ()
 main_loop handle = do
-  time <- liftIO $ liftM zonedTimeToLocalTime $ getZonedTime
+  time <- liftM zonedTimeToLocalTime $ getZonedTime
   (new_handle,log) <- runWriterT $ answer_updates handle
   closeHandle new_handle
   threadDelay 2000000
