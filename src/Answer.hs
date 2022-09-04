@@ -4,6 +4,7 @@ import           GetUpdates
 import           Handle
 import 			 Config
 import           Log
+import           Repeats
 import           Control.Monad.Trans.Writer.Lazy ( WriterT, runWriterT, tell )
 import           Data.ByteString.Lazy.Char8      as Char8      ( ByteString, unpack, empty )
 import           Network.HTTP.Simple             ( httpLBS, getResponseBody, parseRequest_ )
@@ -11,6 +12,7 @@ import           Control.Monad.IO.Class          ( liftIO )
 import           Data.Aeson                      ( eitherDecode )
 import           Control.Monad                   ( liftM, replicateM )
 import           Data.HashMap.Strict as HM       ( findWithDefault )
+import           Data.Aeson                      ( encode )
 import           Data.Time
 import           Prelude hiding (id)
 
@@ -64,12 +66,20 @@ answer_commands handle upd = do
          answer_command command = do
              case command of 
                 "/help"    -> construct_request handle (chat_id . chat . message $ upd) ( helptext $ config handle)
-                "/repeats" -> construct_request handle (chat_id . chat . message $ upd) ( repeat_text $ config handle)
+                "/repeats" -> repeats_request handle (chat_id . chat . message $ upd) --( repeat_text $ config handle)
                 others     -> return empty
 				
 				
 repeats_request :: Handle -> Int -> IO Char8.ByteString
-repeats_request handle user_id = undefined
+repeats_request handle chat_id = do
+   let message = repeats_message chat_id (repeat_text $ config handle)
+   let json = encode message
+   print json
+   let request = "https://api.telegram.org/bot" ++ bot_token handle ++
+                 "/sendMessage&message="                 ++ show json 
+   print request
+   res <- httpLBS $ parseRequest_ request
+   return (getResponseBody res)
 
 
 
