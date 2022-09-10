@@ -35,6 +35,8 @@ executable SimpleHTTP
     bytestring,
     directory,
     filepath,
+    http-client,
+    http-client-tls,
     http-conduit,
     mtl,
     text,

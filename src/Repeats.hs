@@ -1,11 +1,12 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Repeats ( Send_Message(..), repeats_message ) where
 
 
-import           Data.Aeson ( ToJSON(..), (.=), pairs )
+import           Data.Aeson ( ToJSON(..), (.=), pairs, Key )
 import           GHC.Generics
 
 
@@ -42,21 +43,21 @@ repeats_message chat_id text = Send_Message { to_chat_id = chat_id,
 					 
 					 
 instance ToJSON KeyboardButton where 
-   toEncoding KeyboardButton{..} = pairs ( (read "text") .= keyboard_button_text)
+   toEncoding KeyboardButton{..} = pairs ( "text" .= keyboard_button_text)
 	   
 	 
 instance ToJSON Reply_Markup where
    toEncoding ( ReplyKeyboardMarkup_ (ReplyKeyboardMarkup keyboard_markup) ) = 
-       pairs ( ( read "keyboard" ) .= keyboard_markup)
+       pairs ( "keyboard" .= keyboard_markup )
 	   
 instance ToJSON ReplyKeyboardMarkup where
    toEncoding ( ReplyKeyboardMarkup keyboard_markup ) = 
-       pairs ( ( read "keyboard" ) .= keyboard_markup)
+       pairs ( "keyboard" .= keyboard_markup)
    
 
 instance ToJSON Send_Message where
    toEncoding Send_Message{..} = 
-       pairs ( (read "chat_id")      .= to_chat_id <>
-	           (read "text" )        .= send_text <>
-			   (read "reply_markup") .= reply_markup )
+       pairs ( "chat_id"      .= to_chat_id <>
+	           "text"         .= send_text <>
+			   "reply_markup" .= reply_markup )
 					 

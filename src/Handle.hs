@@ -1,20 +1,19 @@
-module Handle where
+module Handle ( module Config, module Handle ) where
 
-import           Data.Time
-import           GetUpdates
-import           System.Directory
-import           System.FilePath
-import           Config
-import           Log
+import           Data.Time                  ( getZonedTime, zonedTimeToLocalTime, LocalTime, Day )
+import           System.Directory           ( getCurrentDirectory, getDirectoryContents )
+import           System.FilePath            ( pathSeparator )
 import           Control.Monad              ( when, liftM )
-import           Data.Time                  ( LocalTime )
-import           Data.HashMap.Strict as HM  ( HashMap, update, empty, insert, lookup )
+import           Data.HashMap.Strict as HM  ( HashMap, update, empty, insert, lookup, findWithDefault )
+import           GetUpdates
+import           Config
 
 data Handle = Handle { bot_token :: String,
                        config :: Config,
                        update_response :: Response, 
                        logger :: Logger }  deriving Show
 
+type Answered_upd_id = Int
 
 
 -- Initialize
@@ -62,7 +61,7 @@ log_handle h l = Handle { bot_token = bot_token h,
 						}
 
 
-write_answered_handle :: Handle -> Day -> [Int] -> Handle
+write_answered_handle :: Handle -> Day -> [Answered_upd_id] -> Handle
 write_answered_handle handle day list = 
   let old_upd = ( answered_updates $ config handle )
       new_upd = case HM.lookup day old_upd of
@@ -71,7 +70,7 @@ write_answered_handle handle day list =
   in append_answered handle new_upd
   
 
-append_answered :: Handle -> HashMap Day [Int] -> Handle
+append_answered :: Handle -> HashMap Day [Answered_upd_id] -> Handle
 append_answered handle list = 
   let old_config = config handle in
   Handle { bot_token = bot_token handle,
@@ -82,3 +81,37 @@ append_answered handle list =
 							 repeat_text = repeat_text old_config },
 		   update_response = update_response handle,
            logger = logger handle }
+
+
+
+
+set_chats_on_hold :: Handle -> [(Chat_id,Repeats)] -> Handle
+set_chats_on_hold handle [] = handle
+set_chats_on_hold handle [(chat,repeats)] = 
+   let new_settings = insert chat repeats $ (users_settings $ config handle)
+   in update_users_settings handle new_settings
+set_chats_on_hold handle ((chat,repeats):rest) = 
+   let new_settings = insert chat repeats $ ( users_settings . config $ set_chats_on_hold handle rest)
+   in update_users_settings handle new_settings
+   
+   
+   
+update_users_settings :: Handle -> HashMap Chat_id Repeats -> Handle
+update_users_settings h users_settings =
+   let old_config = config h in 
+   Handle { bot_token = bot_token h, 
+            config = Config { answered_updates = answered_updates old_config,
+                              users_settings = users_settings,
+							  default_repeats = default_repeats old_config,
+							  helptext = helptext old_config,
+							  repeat_text = repeat_text old_config } ,
+            update_response = update_response h,
+            logger = logger h  }
+			
+			
+get_user_settings :: Handle -> UpdateResult -> Int
+get_user_settings handle upd = 
+   let default_ = default_repeats $ config handle
+       usrs_settings = users_settings . config $ handle
+       chatID = chat_id . chat . message $ upd
+   in  findWithDefault default_ chatID usrs_settings

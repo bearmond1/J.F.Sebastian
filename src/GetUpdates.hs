@@ -4,11 +4,8 @@
 
 module GetUpdates where
 
-import           Data.Aeson
-import           GHC.Generics
-import           Data.Text                      ( Text )
-import           Control.Applicative
-import           Control.Monad
+import           Data.Aeson   ( FromJSON(..), (.:), (.:?), (.!=), withObject )
+import           GHC.Generics ( Generic )
 
 data Response = Response { ok :: Bool,
                            result :: [UpdateResult] }   		deriving ( Eq, Show, Read, Generic )

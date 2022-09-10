@@ -1,23 +1,24 @@
-module Config ( Config ( .. ), get_config, config_filename ) where
+module Config ( module Log, Config ( .. ), get_config, config_filename, Chat_id, Repeats ) where
 
-import           System.Directory
-import           System.FilePath
-import           Data.Time
+import           System.Directory                ( getCurrentDirectory, getDirectoryContents )
+import           System.FilePath                 ( pathSeparator )
+import           Data.Time                       ( getZonedTime, zonedTimeToLocalTime, LocalTime )
 import           Control.Monad                   ( liftM )
 import           Data.List                       ( groupBy )
 import           Data.HashMap.Strict as HM       ( HashMap, fromList, empty )
-import           Data.Time.Calendar.Compat 
+import           Data.Time.Calendar.Compat       ( Day )
 import           Log
+import           Text.Read                       ( readMaybe )
 
 
 
 
-type User_id = Int
+type Chat_id = Int
 type Repeats = Int
 
 
 data Config = Config { answered_updates :: HashMap Day [Int],
-                       users_settings :: HashMap User_id Repeats,
+                       users_settings :: HashMap Chat_id Repeats,
 					   default_repeats :: Int,
 					   helptext :: String,
 					   repeat_text :: String } deriving (Show, Read)
@@ -34,9 +35,9 @@ get_config = do
   contents     <- if elem config_filename  cur_dir_cont
                     then readFile $ curr_dir ++ (pathSeparator : config_filename)
 		            else return []
-  let (config, log) = if contents == [] 
-                       then ( default_config          , (Info,"Empty config file, loaded default settings") )
-			           else ( read contents :: Config , (Info,"Config loaded") )
+  let (config, log) = case readMaybe contents of 
+                       (Just x) -> (x,(Info,"Config loaded") )
+                       Nothing  -> ( default_config, (Info,"Empty config file, loaded default settings") )
   return (config, (time, [log]) )
   
   

@@ -24,6 +24,8 @@ dependencies:
   - text
   - unordered-containers
   - time-compat
+  - http-client
+  - http-client-tls
 
 executables:
   SimpleHTTP:
